@@ -5,6 +5,13 @@ class MqttManager {
   late MqttServerClient client;
   Function(String, String)? onMessageReceived;
   Function()? onConnected;
+  final List<String> topics = [
+    'control_center',
+    'lights',
+    'temperature',
+    'door',
+    'curtain'
+  ];
 
   MqttManager({this.onMessageReceived, this.onConnected}) {
     client = MqttServerClient('broker.emqx.io', '');
@@ -23,6 +30,7 @@ class MqttManager {
 
   void connect() async {
     try {
+      print('Connecting to the MQTT broker...');
       await client.connect();
     } catch (e) {
       print('Exception during connection: $e');
@@ -41,8 +49,9 @@ class MqttManager {
   }
 
   void _resubscribeToTopics() {
-    final topics = ['emn', 'temperature', 'distance', 'fan'];
-    topics.forEach((topic) => subscribeToTopic(topic));
+    for (String topic in topics) {
+      subscribeToTopic(topic);
+    }
   }
 
   void _listenForMessages() {
@@ -66,23 +75,14 @@ class MqttManager {
     }
   }
 
-  void publishMessage(String message) {
+  void publishMessage(String topic, String message) {
     if (client.connectionStatus!.state == MqttConnectionState.connected) {
       final builder = MqttClientPayloadBuilder();
       builder.addString(message);
-      print('Publishing message: $message to topic: emn');
-      client.publishMessage('emn', MqttQos.atLeastOnce, builder.payload!);
+      client.publishMessage(topic, MqttQos.exactlyOnce, builder.payload!);
     } else {
       print('ERROR: MQTT client is not connected');
     }
-  }
-
-  void _disconnectOnError() {
-    client.disconnect();
-  }
-
-  void onDisconnected() {
-    print('Disconnected');
   }
 
   void _onConnectedHandler() {
@@ -94,5 +94,13 @@ class MqttManager {
 
   void onSubscribed(String topic) {
     print('Subscribed to $topic');
+  }
+
+  void onDisconnected() {
+    print('Disconnected');
+  }
+
+  void _disconnectOnError() {
+    client.disconnect();
   }
 }

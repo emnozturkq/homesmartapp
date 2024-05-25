@@ -3,9 +3,21 @@ import 'package:homesmartapp/utils/sabit.dart';
 import 'package:homesmartapp/widgets/cihazDugmeleri.dart';
 import 'package:homesmartapp/widgets/odaWidget.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:homesmartapp/mqtt/mqtt_manager.dart';
 
 class AnaSayfa extends StatelessWidget {
-  const AnaSayfa({super.key});
+  final MqttManager mqttManager = MqttManager(
+    onConnected: () {
+      print('Connected to MQTT broker');
+    },
+    onMessageReceived: (topic, message) {
+      print('Received message: $message from topic: $topic');
+    },
+  );
+
+  AnaSayfa({super.key}) {
+    mqttManager.connect();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +35,14 @@ class AnaSayfa extends StatelessWidget {
       'Sıcaklık',
       'Oda Kapısı',
       'Perde',
+    ];
+
+    List<String> topics = [
+      'control_center',
+      'lights',
+      'temperature',
+      'door',
+      'curtain',
     ];
 
     PageController kontrol = PageController();
@@ -45,46 +65,34 @@ class AnaSayfa extends StatelessWidget {
                               resim: 'living_room',
                               baslik: 'Salon',
                             ),
-                            /* OdaWidget(
-                              resim: 'bedroom',
-                              baslik: 'Yatak Odası',
-                            ),
-                             OdaWidget(
-                              resim: 'kitchen',
-                              baslik: 'Mutfak',
-                            ),*/
                           ],
                         ),
                       ),
                     ],
                   ),
-                  /* Positioned(
-                    bottom: 70,
-                    child: SmoothPageIndicator(
-                      controller: kontrol,
-                      count: 1,
-                    ),
-                  ), */
                 ],
               ),
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             Expanded(
               flex: 1,
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     mainAxisSpacing: 20,
                     crossAxisSpacing: 15,
                   ),
                   itemBuilder: (context, index) => Cihaztus(
-                      index: index,
-                      icon: tusIcons[index],
-                      baslik: tusAd[index]),
+                    index: index,
+                    icon: tusIcons[index],
+                    baslik: tusAd[index],
+                    mqttManager: mqttManager,
+                    topic: topics[index],
+                  ),
                   itemCount: tusIcons.length,
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                 ),
               ),
             )
