@@ -37,6 +37,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     mqttManager.subscribeToTopic('door');
     mqttManager.subscribeToTopic('curtain');
     mqttManager.subscribeToTopic('fire');
+    mqttManager.subscribeToTopic('fan');
   }
 
   void _handleMessage(String topic, String message) {
@@ -50,7 +51,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
               isLightOpen = message.trim() == '1';
               break;
             case 'temperature':
-              isFanOpen = message.trim() == '1';
+              final temperature = double.tryParse(message.trim());
+              if (temperature != null && temperature > 30) {
+                _showTemperatureAlert();
+              }
               break;
             case 'door':
               isDoorOpen = message.trim() == '1';
@@ -61,6 +65,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
             case 'fire':
               _showFireAlert();
               break;
+            case 'fan':
+              isFanOpen = message.trim() == '1';
+              break;
             default:
               print('Unknown topic: $topic');
           }
@@ -70,6 +77,26 @@ class _AnaSayfaState extends State<AnaSayfa> {
     } catch (e) {
       print('Error parsing message: $e');
     }
+  }
+
+  void _showTemperatureAlert() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Uyarı!'),
+          content: Text('Oda sıcaklığı 30 derecenin üstünde. Fanı açın.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Tamam'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showFireAlert() {
@@ -142,7 +169,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
                         setState(() {
                           isFanOpen = !isFanOpen;
                           mqttManager.publishMessage(
-                              'temperature', isFanOpen ? '1' : '0');
+                              'fan', isFanOpen ? '1' : '0');
                         });
                       },
                     ),

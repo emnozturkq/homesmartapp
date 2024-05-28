@@ -10,7 +10,8 @@ class MqttManager {
     'lights',
     'temperature',
     'door',
-    'curtain'
+    'curtain',
+    'fan'
   ];
 
   MqttManager({this.onMessageReceived, this.onConnected}) {
@@ -22,7 +23,7 @@ class MqttManager {
     client.onSubscribed = onSubscribed;
 
     final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
+        .withClientIdentifier('emin')
         .startClean()
         .withWillQos(MqttQos.atLeastOnce);
     client.connectionMessage = connMessage;
