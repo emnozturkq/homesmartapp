@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:homesmartapp/mqtt/mqtt_manager.dart';
-import 'dart:async';
 import 'package:homesmartapp/screens/kontrolEkran.dart';
+import 'package:homesmartapp/providers/fan_state.dart';
+import 'package:homesmartapp/providers/curtain_state.dart';
+import 'package:homesmartapp/providers/door_state.dart';
+import 'package:homesmartapp/providers/light_state.dart';
+import 'package:homesmartapp/utils/fan_kontrol.dart';
+import 'package:homesmartapp/utils/perde_kontrol.dart';
+import 'package:homesmartapp/utils/kapi_kontrol.dart';
+import 'package:homesmartapp/utils/isik_kontrol.dart';
 
 class AnaSayfa extends StatefulWidget {
-  const AnaSayfa({Key? key}) : super(key: key);
-
   @override
   _AnaSayfaState createState() => _AnaSayfaState();
 }
 
 class _AnaSayfaState extends State<AnaSayfa> {
   late MqttManager mqttManager;
-  bool isLightOpen = false;
-  bool isFanOpen = false;
-  bool isDoorOpen = false;
-  bool isCurtainOpen = false;
-  double distance = 0.0;
-  bool fireDetected = false;
-  List<String> messages = [];
-  Timer? debounceTimer;
 
   @override
   void initState() {
@@ -41,89 +39,29 @@ class _AnaSayfaState extends State<AnaSayfa> {
   }
 
   void _handleMessage(String topic, String message) {
-    print('Received message from $topic: $message');
-    try {
-      if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
-      debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-        setState(() {
-          switch (topic) {
-            case 'lights':
-              isLightOpen = message.trim() == '1';
-              break;
-            case 'temperature':
-              final temperature = double.tryParse(message.trim());
-              if (temperature != null && temperature > 30) {
-                _showTemperatureAlert();
-              }
-              break;
-            case 'door':
-              isDoorOpen = message.trim() == '1';
-              break;
-            case 'curtain':
-              isCurtainOpen = message.trim() == '1';
-              break;
-            case 'fire':
-              _showFireAlert();
-              break;
-            case 'fan':
-              isFanOpen = message.trim() == '1';
-              break;
-            default:
-              print('Unknown topic: $topic');
-          }
-          messages.add('Topic: $topic, Message: $message');
-        });
-      });
-    } catch (e) {
-      print('Error parsing message: $e');
+    switch (topic) {
+      case 'fan':
+        context.read<FanState>().setFanState(message.trim() == '1');
+        break;
+      case 'light':
+        context.read<LightState>().setLightState(message.trim() == '1');
+        break;
+      case 'curtain':
+        context.read<CurtainState>().setCurtainState(message.trim() == '1');
+        break;
+      case 'door':
+        context.read<DoorState>().setDoorState(message.trim() == '1');
+        break;
+      default:
+        print('Unknown topic: $topic');
     }
-  }
-
-  void _showTemperatureAlert() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Uyarı!'),
-          content: Text('Oda sıcaklığı 30 derecenin üstünde. Fanı açın.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Tamam'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showFireAlert() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Yangın Alarmı!'),
-          content: Text('Yangın tespit edildi. Lütfen güvenli bir yere geçin.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Tamam'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: Color.fromRGBO(53, 55, 75, 1), // Arka plan rengi
+        color: Color.fromRGBO(53, 55, 75, 1),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -151,50 +89,49 @@ class _AnaSayfaState extends State<AnaSayfa> {
                   children: [
                     _buildDeviceCard(
                       'Işık',
-                      isLightOpen,
+                      context.watch<LightState>().isLightOpen,
                       Icons.lightbulb,
                       () {
-                        setState(() {
-                          isLightOpen = !isLightOpen;
-                          mqttManager.publishMessage(
-                              'lights', isLightOpen ? '1' : '0');
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => IsikKontrol()),
+                        );
                       },
                     ),
                     _buildDeviceCard(
                       'Fan',
-                      isFanOpen,
+                      context.watch<FanState>().isFanOn,
                       Icons.ac_unit,
                       () {
-                        setState(() {
-                          isFanOpen = !isFanOpen;
-                          mqttManager.publishMessage(
-                              'fan', isFanOpen ? '1' : '0');
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => FanKontrol()),
+                        );
                       },
                     ),
                     _buildDeviceCard(
                       'Oda Kapısı',
-                      isDoorOpen,
+                      context.watch<DoorState>().isKapiOpen,
                       Icons.door_sliding,
                       () {
-                        setState(() {
-                          isDoorOpen = !isDoorOpen;
-                          mqttManager.publishMessage(
-                              'door', isDoorOpen ? '1' : '0');
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => KapiKontrol()),
+                        );
                       },
                     ),
                     _buildDeviceCard(
                       'Perde',
-                      isCurtainOpen,
+                      context.watch<CurtainState>().isCurtainOpen,
                       Icons.curtains_closed_rounded,
                       () {
-                        setState(() {
-                          isCurtainOpen = !isCurtainOpen;
-                          mqttManager.publishMessage(
-                              'curtain', isCurtainOpen ? '1' : '0');
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => PerdeKontrol()),
+                        );
                       },
                     ),
                   ],
@@ -215,7 +152,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     VoidCallback onTap,
   ) {
     return Card(
-      color: Color.fromRGBO(241, 241, 241, 1), // Kart rengi
+      color: Color.fromRGBO(241, 241, 241, 1),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
@@ -252,7 +189,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Widget _buildControlCenterCard() {
     return Card(
-      color: Color.fromRGBO(241, 241, 241, 1), // Kart rengi
+      color: Color.fromRGBO(241, 241, 241, 1),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
