@@ -11,14 +11,14 @@ class Cihaztus extends StatefulWidget {
     required this.icon,
     required this.baslik,
     required this.mqttManager,
-    required this.topic,
+    required this.topics,
   }) : super(key: key);
 
   final int index;
   final IconData icon;
   final String baslik;
   final MqttManager mqttManager;
-  final String topic;
+  final List<String> topics;
 
   @override
   State<Cihaztus> createState() => _CihaztusState();
@@ -27,19 +27,53 @@ class Cihaztus extends StatefulWidget {
 class _CihaztusState extends State<Cihaztus> {
   bool aktiflik = false;
 
+  // Her bir switch için ayrı bool değişkenlerini tanımla
+  bool aktiflikForDoor = false;
+  bool aktiflikForTemperature = false;
+  bool aktiflikForLights = false;
+  bool aktiflikForCurtain = false;
+
   @override
   void initState() {
     super.initState();
-    print('Subscribing to topic: ${widget.topic}');
-    widget.mqttManager.subscribeToTopic(widget.topic);
+    _subscribeToTopics();
+  }
+
+  void _subscribeToTopics() {
     widget.mqttManager.onMessageReceived = (topic, message) {
-      print(
-          'onMessageReceived callback invoked for topic $topic with message $message');
-      if (topic == widget.topic) {
-        print('Updating state for topic $topic with message $message');
-        setState(() {
-          aktiflik = message == '1';
-        });
+      print('Received message: $message from topic: $topic');
+      if (widget.topics.contains(topic)) {
+        switch (topic) {
+          case 'curtain':
+            print('Curtain topic received: $message');
+            setState(() {
+              aktiflik = message == '1';
+            });
+            break;
+          case 'door':
+            print('Door topic received: $message');
+            setState(() {
+              aktiflikForDoor = message == '1';
+            });
+            break;
+          case 'temperature':
+            print('Temperature topic received: $message');
+            setState(() {
+              aktiflikForTemperature = message == '1';
+            });
+            break;
+          case 'lights':
+            print('Lights topic received: $message');
+            setState(() {
+              aktiflikForLights = message == '1';
+            });
+            break;
+          case 'control_center':
+            print('Control Center topic received: $message');
+            break;
+          default:
+            print('Unknown topic: $topic');
+        }
       }
     };
   }
@@ -106,22 +140,56 @@ class _CihaztusState extends State<Cihaztus> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              widget.index == 0
-                  ? Container()
-                  : CupertinoSwitch(
-                      value: aktiflik,
-                      onChanged: (value) {
-                        setState(() {
-                          aktiflik = value;
-                        });
-                        // MQTT mesajı gönder
-                        String message = value ? '1' : '0';
-                        print(
-                            'Publishing message: $message to topic: ${widget.topic}');
-                        widget.mqttManager
-                            .publishMessage(widget.topic, message);
-                      },
-                    ),
+              // Her bir switch için ayrı bir CupertinoSwitch ekle
+              if (widget.index == 1)
+                CupertinoSwitch(
+                  value: aktiflikForDoor,
+                  onChanged: (value) {
+                    setState(() {
+                      aktiflikForDoor = value;
+                    });
+                    // MQTT mesajı gönder
+                    String message = value ? '1' : '0';
+                    widget.mqttManager.publishMessage('door', message);
+                  },
+                ),
+              if (widget.index == 2)
+                CupertinoSwitch(
+                  value: aktiflikForTemperature,
+                  onChanged: (value) {
+                    setState(() {
+                      aktiflikForTemperature = value;
+                    });
+                    // MQTT mesajı gönder
+                    String message = value ? '1' : '0';
+                    widget.mqttManager.publishMessage('temperature', message);
+                  },
+                ),
+              if (widget.index == 3)
+                CupertinoSwitch(
+                  value: aktiflikForLights,
+                  onChanged: (value) {
+                    setState(() {
+                      aktiflikForLights = value;
+                    });
+                    // MQTT mesajı gönder
+                    String message = value ? '1' : '0';
+                    widget.mqttManager.publishMessage('lights', message);
+                  },
+                ),
+              if (widget.index == 4)
+                CupertinoSwitch(
+                  value:
+                      aktiflikForCurtain, // Değiştirildi: aktiflikForcurtain -> aktiflikForCurtain
+                  onChanged: (value) {
+                    setState(() {
+                      aktiflikForCurtain = value;
+                    });
+                    // MQTT mesajı gönder
+                    String message = value ? '1' : '0';
+                    widget.mqttManager.publishMessage('curtain', message);
+                  },
+                ),
             ],
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
