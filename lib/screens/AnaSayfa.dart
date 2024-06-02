@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:homesmartapp/mqtt/mqtt_manager.dart';
-import 'package:homesmartapp/screens/kontrolEkran.dart';
 import 'package:homesmartapp/providers/fan_state.dart';
-import 'package:homesmartapp/providers/curtain_state.dart';
 import 'package:homesmartapp/providers/door_state.dart';
 import 'package:homesmartapp/providers/light_state.dart';
 import 'package:homesmartapp/utils/fan_kontrol.dart';
-import 'package:homesmartapp/utils/perde_kontrol.dart';
 import 'package:homesmartapp/utils/kapi_kontrol.dart';
 import 'package:homesmartapp/utils/isik_kontrol.dart';
 
@@ -30,11 +27,10 @@ class _AnaSayfaState extends State<AnaSayfa> {
   }
 
   void _onMqttConnected() {
-    mqttManager.subscribeToTopic('lights');
+    mqttManager.subscribeToTopic('isik');
     mqttManager.subscribeToTopic('temperature');
     mqttManager.subscribeToTopic('door');
-    mqttManager.subscribeToTopic('curtain');
-    mqttManager.subscribeToTopic('fire');
+    mqttManager.subscribeToTopic('alarm');
     mqttManager.subscribeToTopic('fan');
   }
 
@@ -43,18 +39,38 @@ class _AnaSayfaState extends State<AnaSayfa> {
       case 'fan':
         context.read<FanState>().setFanState(message.trim() == '1');
         break;
-      case 'light':
+      case 'isik':
         context.read<LightState>().setLightState(message.trim() == '1');
-        break;
-      case 'curtain':
-        context.read<CurtainState>().setCurtainState(message.trim() == '1');
         break;
       case 'door':
         context.read<DoorState>().setDoorState(message.trim() == '1');
         break;
+      case 'alarm':
+        _showFireAlert();
+        break;
       default:
         print('Unknown topic: $topic');
     }
+  }
+
+  void _showFireAlert() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Yangın Alarmı!'),
+          content: Text('Yangın tespit edildi. Lütfen güvenli bir yere geçin.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Tamam'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -68,19 +84,16 @@ class _AnaSayfaState extends State<AnaSayfa> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: 20),
-              Center(
-                child: _buildControlCenterCard(),
-              ),
-              SizedBox(height: 20),
               Text(
-                'Hoşgeldiniz',
+                'Ev Kontrol Paneli',
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -119,18 +132,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => KapiKontrol()),
-                        );
-                      },
-                    ),
-                    _buildDeviceCard(
-                      'Perde',
-                      context.watch<CurtainState>().isCurtainOpen,
-                      Icons.curtains_closed_rounded,
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => PerdeKontrol()),
                         );
                       },
                     ),
@@ -179,49 +180,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 icon,
                 size: 40,
                 color: isOn ? Colors.green : Colors.grey,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildControlCenterCard() {
-    return Card(
-      color: Color.fromRGBO(241, 241, 241, 1),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => KontrolEkran()),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kontrol Merkezi',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 5),
-              Text(
-                'Kontrol Merkezi',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.blue,
-                ),
-              ),
-              SizedBox(height: 10),
-              Icon(
-                Icons.control_camera,
-                size: 40,
-                color: Colors.blue,
               ),
             ],
           ),

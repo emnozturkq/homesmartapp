@@ -6,12 +6,13 @@ class MqttManager {
   Function(String, String)? onMessageReceived;
   Function()? onConnected;
   final List<String> topics = [
-    'control_center',
-    'lights',
+    'alarm',
+    'isik',
     'temperature',
     'door',
-    'curtain',
-    'fan'
+    'fan',
+    'lights_distance',
+    'door_distance'
   ];
 
   MqttManager({this.onMessageReceived, this.onConnected}) {
@@ -49,12 +50,6 @@ class MqttManager {
     }
   }
 
-  void _resubscribeToTopics() {
-    for (String topic in topics) {
-      subscribeToTopic(topic);
-    }
-  }
-
   void _listenForMessages() {
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
       final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
@@ -65,6 +60,12 @@ class MqttManager {
         onMessageReceived!(c[0].topic, pt);
       }
     });
+  }
+
+  void _resubscribeToTopics() {
+    for (String topic in topics) {
+      subscribeToTopic(topic);
+    }
   }
 
   void subscribeToTopic(String topic) {

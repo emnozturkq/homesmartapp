@@ -11,6 +11,7 @@ class IsikKontrol extends StatefulWidget {
 
 class _IsikKontrolState extends State<IsikKontrol> {
   late MqttManager mqttManager;
+  double distance = 0.0;
 
   @override
   void initState() {
@@ -23,12 +24,20 @@ class _IsikKontrolState extends State<IsikKontrol> {
   }
 
   void _onMqttConnected() {
-    mqttManager.subscribeToTopic('fan');
+    mqttManager.subscribeToTopic('isik');
+    mqttManager.subscribeToTopic('lights_distance');
   }
 
   void _handleMessage(String topic, String message) {
-    if (topic == 'light') {
-      context.read<LightState>().setLightState(message.trim() == '1');
+    switch (topic) {
+      case 'isik':
+        context.read<LightState>().setLightState(message.trim() == '1');
+        break;
+      case 'lights_distance':
+        setState(() {
+          distance = double.tryParse(message.trim()) ?? 0.0;
+        });
+        break;
     }
   }
 
@@ -42,17 +51,58 @@ class _IsikKontrolState extends State<IsikKontrol> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Işık Kontrolü'),
-        actions: [
-          CupertinoSwitch(
-            value: context.watch<LightState>().isLightOpen,
-            onChanged: _toggleLight,
-          ),
-        ],
       ),
       body: Center(
-        child: Text(
-          'Işık kontrol sayfası',
-          style: TextStyle(fontSize: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Mesafe Bilgisi',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '${distance.toStringAsFixed(2)} m',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Icon(
+                      Icons.speed,
+                      size: 50,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 40),
+            Text(
+              'Işık Durumu',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            CupertinoSwitch(
+              value: context.watch<LightState>().isLightOpen,
+              onChanged: _toggleLight,
+            ),
+          ],
         ),
       ),
     );

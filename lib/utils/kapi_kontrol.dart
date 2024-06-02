@@ -11,6 +11,7 @@ class KapiKontrol extends StatefulWidget {
 
 class _KapiKontrolState extends State<KapiKontrol> {
   late MqttManager mqttManager;
+  double distance = 0.0;
 
   @override
   void initState() {
@@ -24,11 +25,19 @@ class _KapiKontrolState extends State<KapiKontrol> {
 
   void _onMqttConnected() {
     mqttManager.subscribeToTopic('door');
+    mqttManager.subscribeToTopic('door_distance');
   }
 
   void _handleMessage(String topic, String message) {
-    if (topic == 'door') {
-      context.read<DoorState>().setDoorState(message.trim() == '1');
+    switch (topic) {
+      case 'door':
+        context.read<DoorState>().setDoorState(message.trim() == '1');
+        break;
+      case 'door_distance':
+        setState(() {
+          distance = double.tryParse(message.trim()) ?? 0.0;
+        });
+        break;
     }
   }
 
@@ -42,17 +51,58 @@ class _KapiKontrolState extends State<KapiKontrol> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Kapı Kontrolü'),
-        actions: [
-          CupertinoSwitch(
-            value: context.watch<DoorState>().isKapiOpen,
-            onChanged: _toggleKapi,
-          ),
-        ],
       ),
       body: Center(
-        child: Text(
-          'Kapı kontrol sayfası',
-          style: TextStyle(fontSize: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Mesafe Bilgisi',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '${distance.toStringAsFixed(2)} m',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Icon(
+                      Icons.speed,
+                      size: 50,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 40),
+            Text(
+              'Kapı Durumu',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            CupertinoSwitch(
+              value: context.watch<DoorState>().isKapiOpen,
+              onChanged: _toggleKapi,
+            ),
+          ],
         ),
       ),
     );

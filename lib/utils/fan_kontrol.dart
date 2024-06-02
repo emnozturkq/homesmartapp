@@ -11,7 +11,7 @@ class FanKontrol extends StatefulWidget {
 
 class _FanKontrolState extends State<FanKontrol> {
   late MqttManager mqttManager;
-
+  double temperature = 0.0;
   @override
   void initState() {
     super.initState();
@@ -24,11 +24,19 @@ class _FanKontrolState extends State<FanKontrol> {
 
   void _onMqttConnected() {
     mqttManager.subscribeToTopic('fan');
+    mqttManager.subscribeToTopic('temperature');
   }
 
   void _handleMessage(String topic, String message) {
-    if (topic == 'fan') {
-      context.read<FanState>().setFanState(message.trim() == '1');
+    switch (topic) {
+      case 'fan':
+        context.read<FanState>().setFanState(message.trim() == '1');
+        break;
+      case 'temperature':
+        setState(() {
+          temperature = double.tryParse(message.trim()) ?? 0.0;
+        });
+        break;
     }
   }
 
@@ -42,17 +50,58 @@ class _FanKontrolState extends State<FanKontrol> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Fan Kontrolü'),
-        actions: [
-          CupertinoSwitch(
-            value: context.watch<FanState>().isFanOn,
-            onChanged: _toggleFan,
-          ),
-        ],
       ),
       body: Center(
-        child: Text(
-          'Fan kontrol sayfası',
-          style: TextStyle(fontSize: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Sıcaklık',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      '${temperature.toStringAsFixed(1)}°C',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Icon(
+                      Icons.thermostat_outlined,
+                      size: 50,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 40),
+            Text(
+              'Fan Durumu',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            CupertinoSwitch(
+              value: context.watch<FanState>().isFanOn,
+              onChanged: _toggleFan,
+            ),
+          ],
         ),
       ),
     );
