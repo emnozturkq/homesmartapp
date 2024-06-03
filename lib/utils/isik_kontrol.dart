@@ -12,6 +12,7 @@ class IsikKontrol extends StatefulWidget {
 class _IsikKontrolState extends State<IsikKontrol> {
   late MqttManager mqttManager;
   double distance = 0.0;
+  bool motionDetected = false;
 
   @override
   void initState() {
@@ -34,16 +35,24 @@ class _IsikKontrolState extends State<IsikKontrol> {
         context.read<LightState>().setLightState(message.trim() == '1');
         break;
       case 'lights_distance':
-        setState(() {
-          distance = double.tryParse(message.trim()) ?? 0.0;
-        });
+        if (message.trim() == 'Motion Detected') {
+          setState(() {
+            motionDetected = true;
+            _toggleLight(true);
+          });
+        } else if (message.trim() == 'Motion not Detected') {
+          setState(() {
+            motionDetected = false;
+            _toggleLight(false);
+          });
+        }
         break;
     }
   }
 
   void _toggleLight(bool value) {
     context.read<LightState>().setLightState(value);
-    mqttManager.publishMessage('lights', value ? '1' : '0');
+    mqttManager.publishMessage('isik', value ? '1' : '0');
   }
 
   @override
@@ -56,42 +65,6 @@ class _IsikKontrolState extends State<IsikKontrol> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Mesafe Bilgisi',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      '${distance.toStringAsFixed(2)} m',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Icon(
-                      Icons.speed,
-                      size: 50,
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
-            ),
             SizedBox(height: 40),
             Text(
               'Işık Durumu',

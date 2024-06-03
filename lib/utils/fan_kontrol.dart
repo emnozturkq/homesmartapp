@@ -12,6 +12,7 @@ class FanKontrol extends StatefulWidget {
 class _FanKontrolState extends State<FanKontrol> {
   late MqttManager mqttManager;
   double temperature = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -33,9 +34,15 @@ class _FanKontrolState extends State<FanKontrol> {
         context.read<FanState>().setFanState(message.trim() == '1');
         break;
       case 'temperature':
+        double temp = double.tryParse(message.trim()) ?? 0.0;
         setState(() {
-          temperature = double.tryParse(message.trim()) ?? 0.0;
+          temperature = temp;
         });
+        if (temp > 25.00) {
+          _toggleFan(true);
+        } else {
+          _toggleFan(false);
+        }
         break;
     }
   }

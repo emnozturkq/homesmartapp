@@ -34,10 +34,20 @@ class _KapiKontrolState extends State<KapiKontrol> {
         context.read<DoorState>().setDoorState(message.trim() == '1');
         break;
       case 'door_distance':
+        double newDistance = double.tryParse(message.trim()) ?? 0.0;
         setState(() {
-          distance = double.tryParse(message.trim()) ?? 0.0;
+          distance = newDistance;
         });
+        MesafeKontrolKapi(newDistance);
         break;
+    }
+  }
+
+  void MesafeKontrolKapi(double distance) {
+    if (distance < 50.0) {
+      _toggleKapi(true);
+    } else {
+      _toggleKapi(false);
     }
   }
 
